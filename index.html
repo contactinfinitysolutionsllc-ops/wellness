@@ -90,7 +90,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 .btn-auth{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;padding:.82rem;border-radius:100px;border:none;cursor:pointer;background:var(--accent);color:#042f2a;transition:all .2s;margin-top:.3rem}
 .btn-auth:hover{background:var(--accent2);transform:translateY(-1px)}
 .btn-auth:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.auth-error{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);color:var(--red);border-radius:8px;padding:.6rem .9rem;font-size:.82rem;display:none}
+.auth-msg{border-radius:8px;padding:.65rem .9rem;font-size:.82rem;display:none;margin-bottom:.5rem;line-height:1.5}
+.auth-msg.error{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);color:var(--red)}
+.auth-msg.info{background:rgba(79,158,255,.08);border:1px solid rgba(79,158,255,.25);color:#7ab8ff}
 .auth-divider{display:flex;align-items:center;gap:.8rem;margin:.3rem 0}
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .auth-divider span{font-size:.72rem;color:var(--muted)}
@@ -300,7 +302,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 <!-- ── LANDING ── -->
 <div id="screen-landing" class="screen active">
   <nav class="land-nav">
-    <a href="https://contactinfinitysolutionsllc-ops.github.io/infinityhub/" class="land-logo">Infinity<em>.</em>Wellness</a>
+    <a href="https://infinityhub.dev" class="land-logo">Infinity<em>.</em>Wellness</a>
     <div class="land-nav-right">
       <button class="btn-nav btn-nav-ghost" onclick="showAuth('login')">Sign in</button>
       <button class="btn-nav btn-nav-solid" onclick="showAuth('signup')">Get started</button>
@@ -358,6 +360,22 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
   </div>
 </div>
 
+<!-- ── EMAIL CONFIRM ── -->
+<div id="screen-confirm" class="screen">
+  <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem">
+    <div class="auth-card" style="text-align:center">
+      <div style="font-size:2.8rem;margin-bottom:.8rem">📬</div>
+      <div class="auth-logo">Infinity<em>.</em>Wellness</div>
+      <div class="auth-tagline">Check your email to continue</div>
+      <p style="font-size:.84rem;color:var(--muted2);line-height:1.6;margin-bottom:.5rem">We sent a confirmation link to<br><strong id="confirm-email-display" style="color:var(--accent)"></strong></p>
+      <p style="font-size:.76rem;color:var(--muted);margin-bottom:1.2rem">Click the link in the email to activate your account. Check spam if you don't see it.</p>
+      <button id="btn-resend" onclick="resendConfirmation()" style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;padding:.72rem;border-radius:100px;border:1px solid var(--border2);background:transparent;color:var(--muted2);cursor:pointer;width:100%;margin-bottom:.8rem">Resend confirmation email</button>
+      <button onclick="switchAuthTab('login');showScreen('auth')" class="btn-auth">Already confirmed? Sign in</button>
+      <button onclick="showScreen('landing')" style="background:none;border:none;color:var(--muted);font-size:.78rem;cursor:pointer;margin-top:.8rem;width:100%">← Back to home</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── AUTH ── -->
 <div id="screen-auth" class="screen">
   <div class="auth-card">
@@ -367,7 +385,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
       <div class="auth-tab active" id="tab-signup" onclick="switchAuthTab('signup')">Create account</div>
       <div class="auth-tab" id="tab-login" onclick="switchAuthTab('login')">Sign in</div>
     </div>
-    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-msg" id="auth-msg"></div>
     <div class="auth-form" id="signup-form">
       <div class="form-group">
         <label class="form-label">Your name</label>
@@ -379,7 +397,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
-        <input type="password" class="form-input" id="signup-pass" placeholder="At least 6 characters">
+        <input type="password" class="form-input" id="signup-pass" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter')doSignup()">
       </div>
       <button class="btn-auth" onclick="doSignup()">Create account →</button>
     </div>
@@ -390,9 +408,10 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
-        <input type="password" class="form-input" id="login-pass" placeholder="Your password">
+        <input type="password" class="form-input" id="login-pass" placeholder="Your password" onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <button class="btn-auth" onclick="doLogin()">Sign in →</button>
+      <button onclick="showForgotPassword()" style="background:none;border:none;color:var(--muted);font-size:.78rem;cursor:pointer;text-align:center;width:100%;margin-top:-.2rem">Forgot password?</button>
     </div>
     <div style="text-align:center;margin-top:1rem">
       <button onclick="showScreen('landing')" style="background:none;border:none;color:var(--muted);font-size:.78rem;cursor:pointer">← Back to home</button>
@@ -715,13 +734,16 @@ const WORKER_URL   = 'https://justdocs-worker.robertjosephreynolds.workers.dev';
 const SUPABASE_URL = 'https://zcvkgevcrgsujnqovxgd.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_WeAsyK0Xo7G-VbhIwFUlNQ_pGNmu75T';
 const APP_NAME     = 'infinitywellness';
-const FREE_KEY     = 'wellness_free';
+const APP_URL      = 'https://contactinfinitysolutionsllc-ops.github.io/wellness/';
+// Free sessions scoped per user - see getFreeKey()
 const FREE_LIMIT   = 5;
 
 // ══════════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════════
 let currentUser    = null;
+let _subCache      = null;
+let _pendingEmail  = '';
 let chatHistory    = [];
 let chatMood       = '';
 let selectedMood   = 0;
@@ -757,10 +779,12 @@ function switchAuthTab(tab){
   document.getElementById('auth-error').style.display='none';
 }
 
-function showAuthError(msg){
-  const el=document.getElementById('auth-error');
-  el.textContent=msg; el.style.display='block';
+function showAuthMsg(msg,type='error'){
+  const el=document.getElementById('auth-msg');
+  el.textContent=msg; el.className='auth-msg '+type; el.style.display='block';
 }
+function clearAuthMsg(){ document.getElementById('auth-msg').style.display='none'; }
+function showAuthError(msg){ showAuthMsg(msg,'error'); }
 
 // ══════════════════════════════════════════════════════════
 // SUPABASE AUTH
@@ -799,15 +823,17 @@ async function doSignup(){
   if(pass.length<6){showAuthError('Password must be at least 6 characters.');return;}
   const btn=document.querySelector('#signup-form .btn-auth');
   btn.disabled=true; btn.innerHTML='<span class="spinner-sm"></span>Creating account…';
-  const data = await sbAuthFetch('/signup',{email,password:pass,data:{name:name||email.split('@')[0]}});
+  const data = await sbAuthFetch('/signup',{email,password:pass,data:{name:name||email.split('@')[0]},options:{emailRedirectTo:APP_URL}});
   btn.disabled=false; btn.textContent='Create account →';
   if(data.error){showAuthError(data.error.message||'Signup failed. Please try again.');return;}
-  if(data.user||data.access_token){
-    const token = data.access_token || data.session?.access_token;
-    loginSuccess(data.user||data, token, name||email.split('@')[0]);
-  } else {
+  if(data.access_token){
+    loginSuccess(data.user, data.access_token, name||email.split('@')[0]);
+  } else if(data.user){
+    _pendingEmail = email;
     showAuthError('Check your email to confirm your account, then sign in.');
     switchAuthTab('login');
+  } else {
+    showAuthError('Something went wrong. Please try again.');
   }
 }
 
@@ -819,7 +845,15 @@ async function doLogin(){
   btn.disabled=true; btn.innerHTML='<span class="spinner-sm"></span>Signing in…';
   const data = await sbAuthFetch('/token?grant_type=password',{email,password:pass});
   btn.disabled=false; btn.textContent='Sign in →';
-  if(data.error){showAuthError(data.error.message||'Sign in failed. Check your email and password.');return;}
+  if(data.error){
+    if(data.error.message?.includes('Email not confirmed')){
+      _pendingEmail = email;
+      showAuthError('Please confirm your email first — check your inbox.');
+      return;
+    }
+    showAuthError(data.error.message?.includes('Invalid')?'Incorrect email or password.':(data.error.message||'Sign in failed.'));
+    return;
+  }
   const name = data.user?.user_metadata?.name || email.split('@')[0];
   loginSuccess(data.user, data.access_token, name);
 }
@@ -832,9 +866,31 @@ function loginSuccess(user, token, name){
 
 function doSignout(){
   currentUser=null;
-  localStorage.removeItem('wellness_user');
+  _subCache=null;
   chatHistory=[];
+  localStorage.removeItem('wellness_user');
   showScreen('landing');
+}
+
+async function resendConfirmation(){
+  if(!_pendingEmail) return;
+  const btn=document.getElementById('btn-resend');
+  if(!btn) return;
+  btn.disabled=true; btn.textContent='Sending…';
+  const r=await fetch(SUPABASE_URL+'/auth/v1/resend',{method:'POST',
+    headers:{'apikey':SUPABASE_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email:_pendingEmail,type:'signup'})});
+  btn.textContent='Sent! Check your inbox';
+  setTimeout(()=>{btn.disabled=false;btn.textContent='Resend confirmation email';},30000);
+}
+
+async function showForgotPassword(){
+  const email=prompt('Enter your email to reset your password:');
+  if(!email) return;
+  await fetch(SUPABASE_URL+'/auth/v1/recover',{method:'POST',
+    headers:{'apikey':SUPABASE_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email,options:{redirectTo:APP_URL}})});
+  showAuthError('If that email exists, a reset link has been sent.');
 }
 
 // ══════════════════════════════════════════════════════════
@@ -867,14 +923,15 @@ function setGreeting(){
 // ══════════════════════════════════════════════════════════
 // FREE / SUBSCRIPTION
 // ══════════════════════════════════════════════════════════
+function getFreeKey(){ return 'wellness_free_'+(currentUser?.id||'anon'); }
 function getFree(){
-  const d=JSON.parse(localStorage.getItem(FREE_KEY)||'{}');
+  const d=JSON.parse(localStorage.getItem(getFreeKey())||'{}');
   const m=new Date().toISOString().slice(0,7);
   return d.month===m?(d.count||0):0;
 }
 function incFree(){
   const m=new Date().toISOString().slice(0,7);
-  localStorage.setItem(FREE_KEY,JSON.stringify({month:m,count:getFree()+1}));
+  localStorage.setItem(getFreeKey(),JSON.stringify({month:m,count:getFree()+1}));
   updateFreeUI();
 }
 function updateFreeUI(){
@@ -884,11 +941,14 @@ function updateFreeUI(){
 
 async function isSubscribed(){
   if(!currentUser) return false;
+  if(_subCache !== null) return _subCache;
   try{
     const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'checkSubscriber',email:currentUser.email,app:APP_NAME})});
     const data=await res.json();
-    return data.active===true;
+    _subCache = data.active===true;
+    setTimeout(()=>{ _subCache=null; }, 5*60*1000);
+    return _subCache;
   }catch{return false;}
 }
 
@@ -1015,7 +1075,7 @@ Keep responses warm, human, and appropriately concise — this is a conversation
     const reply=data.result||'I\'m here with you. Can you tell me more about what you\'re experiencing?';
     chatHistory.push({role:'assistant',content:reply});
     appendMessage('ai',reply);
-    if(!await isSubscribed()) incFree();
+    if(!_subCache) incFree();
     saveConversation();
   }catch{
     appendMessage('ai','I\'m having trouble connecting right now. Please try again in a moment. If you need immediate support, please reach out to the 988 Lifeline.');
