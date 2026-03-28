@@ -24,8 +24,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 
 /* ── UTILS ── */
 .hidden{display:none!important}
-.screen{display:none;min-height:100vh}
-.screen.active{display:block}
+.screen{display:none !important;min-height:100vh}
+.screen.active{display:block !important}
 @keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -303,9 +303,12 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 <div id="screen-landing" class="screen active">
   <nav class="land-nav">
     <a href="https://infinityhub.dev" class="land-logo">Infinity<em>.</em>Wellness</a>
-    <div class="land-nav-right">
-      <button class="btn-nav btn-nav-ghost" onclick="showAuth('login')">Sign in</button>
-      <button class="btn-nav btn-nav-solid" onclick="showAuth('signup')">Get started</button>
+    <div style="display:flex;align-items:center;gap:1rem">
+      <a href="https://infinityhub.dev" style="font-size:.78rem;color:var(--muted2);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted2)'">← Hub</a>
+      <div class="land-nav-right" id="land-nav-right">
+        <button class="btn-nav btn-nav-ghost" onclick="showAuth('login')">Sign in</button>
+        <button class="btn-nav btn-nav-solid" onclick="showAuth('signup')">Get started</button>
+      </div>
     </div>
   </nav>
 
@@ -761,9 +764,15 @@ let moodLogs       = [];
 // SCREENS
 // ══════════════════════════════════════════════════════════
 function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s=>{
+    s.classList.remove('active');
+    s.style.setProperty('display','none','important');
+  });
   const el=document.getElementById('screen-'+id);
-  if(el) el.classList.add('active');
+  if(el){
+    el.classList.add('active');
+    el.style.setProperty('display','block','important');
+  }
 }
 
 function showAuth(tab){
@@ -776,7 +785,7 @@ function switchAuthTab(tab){
   document.getElementById('login-form').classList.toggle('hidden',  tab==='signup');
   document.getElementById('tab-signup').classList.toggle('active',  tab==='signup');
   document.getElementById('tab-login').classList.toggle('active',   tab==='login');
-  document.getElementById('auth-error').style.display='none';
+  document.getElementById('auth-msg').style.display='none';
 }
 
 function showAuthMsg(msg,type='error'){
@@ -820,7 +829,7 @@ async function doSignup(){
   const email = document.getElementById('signup-email').value.trim();
   const pass  = document.getElementById('signup-pass').value;
   if(!email||!pass){showAuthError('Please fill in all fields.');return;}
-  if(pass.length<6){showAuthError('Password must be at least 6 characters.');return;}
+  if(pass.length<8){showAuthError('Password must be at least 8 characters.');return;}
   const btn=document.querySelector('#signup-form .btn-auth');
   btn.disabled=true; btn.innerHTML='<span class="spinner-sm"></span>Creating account…';
   const data = await sbAuthFetch('/signup',{email,password:pass,data:{name:name||email.split('@')[0]},options:{emailRedirectTo:APP_URL}});
@@ -861,6 +870,7 @@ async function doLogin(){
 function loginSuccess(user, token, name){
   currentUser = {id: user.id, email: user.email, name, token};
   localStorage.setItem('wellness_user', JSON.stringify(currentUser));
+  localStorage.setItem('ig_account_email', user.email);
   initApp();
 }
 
@@ -896,7 +906,27 @@ async function showForgotPassword(){
 // ══════════════════════════════════════════════════════════
 // APP INIT
 // ══════════════════════════════════════════════════════════
+function updateLandingNav(){
+  const email=currentUser?.email;
+  if(!email) return;
+  const nav=document.getElementById('land-nav-right');
+  if(!nav) return;
+  nav.innerHTML=`
+    <a href="https://contactinfinitysolutionsllc-ops.github.io/account/"
+       style="display:inline-flex;align-items:center;gap:.4rem;font-family:'Syne',sans-serif;
+              font-weight:700;font-size:.82rem;color:var(--text);text-decoration:none;
+              background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.22);
+              padding:.42rem 1rem;border-radius:100px">
+      <span style="width:20px;height:20px;border-radius:50%;background:rgba(45,212,191,.2);
+                   display:inline-flex;align-items:center;justify-content:center;
+                   font-size:.65rem;color:var(--accent);">${email[0].toUpperCase()}</span>
+      My Account
+    </a>
+    <button class="btn-nav btn-nav-solid" onclick="showScreen('app')">Open App →</button>`;
+}
+
 function initApp(){
+  updateLandingNav();
   showScreen('app');
   const initials = (currentUser.name||'?')[0].toUpperCase();
   document.getElementById('user-avatar').textContent=initials;
@@ -999,7 +1029,7 @@ async function handlePaidReturn(){
     await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'addSubscriber',email,app:APP_NAME})});
     if(type==='session'){
-      const d=JSON.parse(localStorage.getItem(FREE_KEY)||'{}');
+      const d=JSON.parse(localStorage.getItem(getFreeKey())||'{}');
       const m=new Date().toISOString().slice(0,7);
       localStorage.setItem(FREE_KEY,JSON.stringify({month:m,count:Math.max(0,(d.count||1)-1)}));
     }
@@ -1508,10 +1538,35 @@ function updateStreakUI(){
 // AUTO LOGIN
 // ══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
+  // 1. Own saved session
   const saved=localStorage.getItem('wellness_user');
   if(saved){
-    try{currentUser=JSON.parse(saved);initApp();}
-    catch{localStorage.removeItem('wellness_user');}
+    try{
+      const u=JSON.parse(saved);
+      if(u?.id&&u?.email){currentUser=u;initApp();return;}
+      else localStorage.removeItem('wellness_user');
+    }catch{localStorage.removeItem('wellness_user');}
+  }
+  // 2. Shared Supabase session from account page
+  try{
+    const raw=localStorage.getItem('sb-zcvkgevcrgsujnqovxgd-auth-token');
+    if(raw){
+      const parsed=JSON.parse(raw);
+      const sess=parsed?.currentSession||parsed?.session||parsed;
+      const user=sess?.user;
+      const token=sess?.access_token;
+      const exp=sess?.expires_at;
+      if(user?.email&&token&&(!exp||Date.now()/1000<exp)){
+        loginSuccess(user,token,user.user_metadata?.name||user.email.split('@')[0]);
+        return;
+      }
+    }
+  }catch(e){}
+  // 3. Pre-fill email if known
+  const storedEmail=localStorage.getItem('ig_account_email');
+  if(storedEmail){
+    const li=document.getElementById('login-email');
+    if(li) li.value=storedEmail;
   }
 });
 </script>
