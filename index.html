@@ -266,12 +266,15 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 .paywall-icon{font-size:2.5rem;margin-bottom:1rem}
 .paywall-card h2{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:.5rem}
 .paywall-card p{font-size:.85rem;color:var(--muted2);margin-bottom:1.5rem;font-weight:300;line-height:1.6}
-.paywall-plans{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.2rem}
-.plan-opt{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer;transition:all .18s}
+.paywall-plans{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1.2rem}
+.plan-opt{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:.85rem .7rem;cursor:pointer;transition:all .18s;text-align:center}
 .plan-opt:hover{border-color:var(--accent)}
-.plan-opt.featured{border-color:var(--accent);background:rgba(45,212,191,.06)}
-.plan-price{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:var(--accent)}
-.plan-label{font-size:.72rem;color:var(--muted2);margin-top:2px}
+.plan-opt.pw-annual{border-color:rgba(240,180,41,.45);background:rgba(240,180,41,.06)}
+.plan-opt.pw-monthly{border-color:rgba(45,212,191,.35)}
+.plan-opt.pw-session{opacity:.85}
+.pw-badge{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#f0b429;margin-bottom:.25rem}
+.plan-price{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;color:var(--accent)}
+.plan-label{font-size:.68rem;color:var(--muted2);margin-top:2px}
 .paywall-email{width:100%;padding:.68rem .9rem;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-family:'Instrument Sans',sans-serif;font-size:.9rem;color:var(--text);outline:none;margin-bottom:.8rem}
 .paywall-email:focus{border-color:var(--accent)}
 .paywall-unlock{display:flex;gap:8px;margin-bottom:1rem}
@@ -537,6 +540,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
         <textarea class="chat-input" id="chat-input" placeholder="Share what's on your mind…" rows="1" onkeydown="chatKeydown(event)"></textarea>
         <button class="btn-send" id="btn-send" onclick="sendMessage()">→</button>
       </div>
+      <div style="text-align:right;margin-top:.4rem">
+        <button class="btn-ai-prompt" onclick="downloadChat()" style="font-size:.75rem;padding:.4rem .8rem">⬇ Save conversation</button>
+      </div>
     </div>
 
     <!-- JOURNAL -->
@@ -555,9 +561,11 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
       <button class="btn-ai-prompt" style="margin-bottom:.8rem;width:100%" onclick="getAIPrompt()">✨ Get a personalized AI prompt</button>
       <input type="text" class="journal-title" id="journal-title" placeholder="Give your entry a title…">
       <textarea class="journal-body" id="journal-body" placeholder="Start writing here…"></textarea>
+      <div id="journal-save-msg" style="display:none;margin-bottom:.4rem;padding:.55rem .85rem;border-radius:8px;font-size:.82rem;line-height:1.5"></div>
       <div class="journal-actions">
-        <button class="btn-journal-save" onclick="saveJournalEntry()">Save entry</button>
+        <button class="btn-journal-save" id="btn-journal-save" onclick="saveJournalEntry()">Save entry</button>
         <button class="btn-ai-prompt" onclick="clearJournal()">Clear</button>
+        <button class="btn-ai-prompt" onclick="downloadJournalEntries()">⬇ Export</button>
       </div>
       <div class="journal-entries" id="journal-entries">
         <div class="section-label">Past entries</div>
@@ -584,6 +592,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
           <button class="mood-scale-btn" data-mood="5" onclick="selectMood(5)" style="border-color:var(--mood5)">😄</button>
         </div>
         <textarea class="mood-note" id="mood-note" rows="2" placeholder="What's influencing your mood? (optional)"></textarea>
+        <div id="mood-log-msg" style="display:none;margin-bottom:.5rem;padding:.55rem .85rem;border-radius:8px;font-size:.82rem;line-height:1.5"></div>
         <button class="btn-journal-save" onclick="logMood()" style="width:100%">Log mood</button>
       </div>
 
@@ -719,21 +728,18 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
   <div class="paywall-card">
     <div class="paywall-icon">🌿</div>
     <h2>Continue your wellness journey</h2>
-    <p>You've used your 5 free sessions this month. Subscribe for unlimited access — or pay $0.99 per session. Already subscribed? Enter your email below to unlock.</p>
+    <p>You've used your free sessions. One subscription covers <em>all</em> Infinity Hub tools — monthly or annual. Already subscribed? Enter your email to unlock.</p>
     <div class="paywall-unlock">
       <input type="email" id="paywall-unlock-email" placeholder="Your email address">
       <button class="btn-unlock" onclick="paywallUnlock()">Unlock</button>
     </div>
+    <div id="paywall-unlock-msg" style="display:none;margin-bottom:.6rem;padding:.6rem .85rem;border-radius:8px;font-size:.82rem;line-height:1.5"></div>
     <input type="email" class="paywall-email" id="paywall-pay-email" placeholder="Your email (for subscription access)">
+    <div id="paywall-pay-msg" style="display:none;margin-bottom:.6rem;padding:.6rem .85rem;border-radius:8px;font-size:.82rem;line-height:1.5"></div>
     <div class="paywall-plans">
-      <div class="plan-opt" onclick="paywallPay('session')">
-        <div class="plan-price">$0.99</div>
-        <div class="plan-label">Single session</div>
-      </div>
-      <div class="plan-opt featured" onclick="paywallPay('monthly')">
-        <div class="plan-price">$4.99/mo</div>
-        <div class="plan-label">Unlimited · best value</div>
-      </div>
+      <div class="plan-opt pw-annual" onclick="paywallPay('annual')"><div class="pw-badge">Best Value</div><div class="plan-price">$99/yr</div><div class="plan-label">Annual · save 31%</div></div>
+      <div class="plan-opt pw-monthly" onclick="paywallPay('monthly')"><div class="plan-price">$12/mo</div><div class="plan-label">Monthly</div></div>
+      <div class="plan-opt pw-session" onclick="paywallPay('session')"><div class="plan-price">$0.99</div><div class="plan-label">24-hr pass</div></div>
     </div>
     <button class="btn-close-paywall" onclick="closePaywall()">Maybe later</button>
   </div>
@@ -746,8 +752,10 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 const WORKER_URL   = 'https://justdocs-worker.robertjosephreynolds.workers.dev';
 const SUPABASE_URL = 'https://zcvkgevcrgsujnqovxgd.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_WeAsyK0Xo7G-VbhIwFUlNQ_pGNmu75T';
-const APP_NAME     = 'infinitywellness';
-const APP_URL      = 'https://contactinfinitysolutionsllc-ops.github.io/wellness/';
+const APP_NAME          = 'infinitywellness';
+const APP_URL           = 'https://contactinfinitysolutionsllc-ops.github.io/wellness/';
+const SQUARE_MONTHLY_URL = 'https://square.link/u/pCpKBYg8'; // replace with Square monthly plan link once created
+const SQUARE_ANNUAL_URL  = 'https://square.link/u/zRrTqrz3'; // replace with Square annual plan link once created
 // Free sessions scoped per user - see getFreeKey()
 const FREE_LIMIT   = 5;
 
@@ -881,6 +889,8 @@ function loginSuccess(user, token, name){
   currentUser = {id: user.id, email: user.email, name, token};
   localStorage.setItem('wellness_user', JSON.stringify(currentUser));
   localStorage.setItem('ig_account_email', user.email);
+  if(token) localStorage.setItem('ig_account_token', token);
+  if(name)  localStorage.setItem('ig_account_name', name);
   initApp();
 }
 
@@ -1020,48 +1030,77 @@ async function checkAccess(){
 function showPaywall(){document.getElementById('paywall').classList.add('show');}
 function closePaywall(){document.getElementById('paywall').classList.remove('show');}
 
+function showUnlockMsg(msg,isErr){
+  const el=document.getElementById('paywall-unlock-msg');
+  if(!el) return;
+  el.textContent=msg;
+  el.style.display='block';
+  if(isErr){el.style.background='rgba(255,107,107,.08)';el.style.border='1px solid rgba(255,107,107,.25)';el.style.color='#ff6b6b';}
+  else{el.style.background='rgba(52,211,153,.08)';el.style.border='1px solid rgba(52,211,153,.25)';el.style.color='#34d399';}
+}
+function clearUnlockMsg(){const el=document.getElementById('paywall-unlock-msg');if(el)el.style.display='none';}
+
+function showPayMsg(msg,isErr){
+  const el=document.getElementById('paywall-pay-msg');
+  if(!el) return;
+  el.textContent=msg;
+  el.style.display='block';
+  if(isErr){el.style.background='rgba(255,107,107,.08)';el.style.border='1px solid rgba(255,107,107,.25)';el.style.color='#ff6b6b';}
+  else{el.style.background='rgba(52,211,153,.08)';el.style.border='1px solid rgba(52,211,153,.25)';el.style.color='#34d399';}
+}
+function clearPayMsg(){const el=document.getElementById('paywall-pay-msg');if(el)el.style.display='none';}
+
 async function paywallUnlock(){
-  const email=document.getElementById('paywall-unlock-email').value.trim();
-  if(!email||!email.includes('@')){alert('Please enter a valid email.');return;}
-  const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'checkSubscriber',email,app:APP_NAME})});
-  const data=await res.json();
-  if(data.active){
-    closePaywall();
-    alert('Unlocked! Enjoy unlimited access.');
-  }else{
-    alert('No active subscription found for that email.');
+  clearUnlockMsg();
+  const emailEl=document.getElementById('paywall-unlock-email');
+  const email=emailEl.value.trim();
+  if(!email||!email.includes('@')){showUnlockMsg('Please enter a valid email.',true);emailEl.style.borderColor='var(--red)';setTimeout(()=>emailEl.style.borderColor='',2000);return;}
+  try{
+    const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'checkSubscriber',email,app:APP_NAME})});
+    const data=await res.json();
+    if(data.active){
+      showUnlockMsg('✓ Unlocked! Enjoy unlimited access.',false);
+      _subCache=true;
+      setTimeout(closePaywall,1200);
+    }else{
+      showUnlockMsg('No active subscription found for that email.',true);
+    }
+  }catch{
+    showUnlockMsg('Connection error. Please try again.',true);
   }
 }
 
-async function paywallPay(type){
-  const email=document.getElementById('paywall-pay-email').value.trim();
-  if(!email||!email.includes('@')){alert('Please enter your email first.');return;}
+async function paywallPay(plan){
+  clearPayMsg();
+  const emailEl=document.getElementById('paywall-pay-email');
+  const email=emailEl.value.trim();
+  if(!email||!email.includes('@')){showPayMsg('Please enter your email first.',true);emailEl.style.borderColor='var(--red)';setTimeout(()=>emailEl.style.borderColor='',2000);return;}
   localStorage.setItem('wellness_pending_email',email);
-  localStorage.setItem('wellness_pending_type',type);
-  const amount=type==='monthly'?4.99:0.99;
-  const label=type==='monthly'?'Infinity Wellness – Monthly':'Infinity Wellness – Single Session';
-  const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'createPaymentLink',docType:label,amount,
-      redirectUrl:'https://contactinfinitysolutionsllc-ops.github.io/wellness/?paid=true'})});
-  const data=await res.json();
-  if(data.url) window.location.href=data.url;
-  else alert('Could not create payment link. Please try again.');
+  localStorage.setItem('wellness_pending_plan',plan);
+  if(plan==='annual'&&SQUARE_ANNUAL_URL){window.location.href=SQUARE_ANNUAL_URL;return;}
+  if(plan==='monthly'&&SQUARE_MONTHLY_URL){window.location.href=SQUARE_MONTHLY_URL;return;}
+  const amounts={annual:99,monthly:12,session:0.99};
+  const labels={annual:'Infinity Hub – Annual',monthly:'Infinity Hub – Monthly',session:'Infinity Hub – Session Pass'};
+  try{
+    const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'createPaymentLink',docType:labels[plan],amount:amounts[plan],
+        redirectUrl:APP_URL+'?paid=true&plan='+plan})});
+    const data=await res.json();
+    if(data.url) window.location.href=data.url;
+    else showPayMsg('Could not create payment link. Please try again.',true);
+  }catch{showPayMsg('Connection error. Please try again.',true);}
 }
 
 async function handlePaidReturn(){
   const email=localStorage.getItem('wellness_pending_email');
-  const type=localStorage.getItem('wellness_pending_type');
+  const plan=new URLSearchParams(window.location.search).get('plan')
+            ||localStorage.getItem('wellness_pending_plan')||'monthly';
   if(email){
     await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'addSubscriber',email,app:APP_NAME})});
-    if(type==='session'){
-      const d=JSON.parse(localStorage.getItem(getFreeKey())||'{}');
-      const m=new Date().toISOString().slice(0,7);
-      localStorage.setItem(FREE_KEY,JSON.stringify({month:m,count:Math.max(0,(d.count||1)-1)}));
-    }
+      body:JSON.stringify({action:'addSubscriber',email,app:APP_NAME,plan})});
     localStorage.removeItem('wellness_pending_email');
-    localStorage.removeItem('wellness_pending_type');
+    localStorage.removeItem('wellness_pending_plan');
     updateFreeUI();
   }
 }
@@ -1127,7 +1166,7 @@ Keep responses warm, human, and appropriately concise — this is a conversation
 
   try{
     const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'claude',prompt:text,system:systemPrompt,history:chatHistory.slice(-8)})});
+      body:JSON.stringify({action:'claude',prompt:text,system:systemPrompt,history:chatHistory.slice(-8),email:localStorage.getItem('ig_account_email')||''})});
     const data=await res.json();
     const reply=data.result||'I\'m here with you. Can you tell me more about what you\'re experiencing?';
     chatHistory.push({role:'assistant',content:reply});
@@ -1190,19 +1229,29 @@ function clearJournal(){
   document.getElementById('journal-body').value='';
 }
 
+function showJournalMsg(msg,isErr){
+  const el=document.getElementById('journal-save-msg');
+  if(!el) return;
+  el.textContent=msg;
+  el.style.display='block';
+  if(isErr){el.style.background='rgba(255,107,107,.08)';el.style.border='1px solid rgba(255,107,107,.25)';el.style.color='#ff6b6b';}
+  else{el.style.background='rgba(52,211,153,.08)';el.style.border='1px solid rgba(52,211,153,.25)';el.style.color='#34d399';}
+}
+function clearJournalMsg(){const el=document.getElementById('journal-save-msg');if(el)el.style.display='none';}
+
 function saveJournalEntry(){
+  clearJournalMsg();
   const title=document.getElementById('journal-title').value.trim()||'Untitled entry';
   const body=document.getElementById('journal-body').value.trim();
-  if(!body){alert('Please write something first.');return;}
+  if(!body){showJournalMsg('Please write something first.',true);return;}
   const entry={id:Date.now(),title,body,date:new Date().toISOString()};
   journalEntries.unshift(entry);
   saveJournalToStorage();
   clearJournal();
   renderJournalEntries();
   updateStreak();
-  const btn=document.querySelector('.btn-journal-save');
-  btn.textContent='✓ Saved!';
-  setTimeout(()=>btn.textContent='Save entry',2000);
+  const btn=document.getElementById('btn-journal-save');
+  if(btn){const orig=btn.textContent;btn.textContent='✓ Saved!';setTimeout(()=>btn.textContent=orig,2000);}
 }
 
 function saveJournalToStorage(){
@@ -1257,16 +1306,26 @@ function quickMood(val){
   logMoodValue(val,'');
 }
 
+function showMoodMsg(msg,isErr){
+  const el=document.getElementById('mood-log-msg');
+  if(!el) return;
+  el.textContent=msg;
+  el.style.display='block';
+  if(isErr){el.style.background='rgba(255,107,107,.08)';el.style.border='1px solid rgba(255,107,107,.25)';el.style.color='#ff6b6b';}
+  else{el.style.background='rgba(52,211,153,.08)';el.style.border='1px solid rgba(52,211,153,.25)';el.style.color='#34d399';}
+}
+function clearMoodMsg(){const el=document.getElementById('mood-log-msg');if(el)el.style.display='none';}
+
 function logMood(){
-  if(!selectedMood){alert('Please select a mood first.');return;}
+  clearMoodMsg();
+  if(!selectedMood){showMoodMsg('Please select a mood first.',true);return;}
   const note=document.getElementById('mood-note').value.trim();
   logMoodValue(selectedMood,note);
   document.getElementById('mood-note').value='';
   selectedMood=0;
   document.querySelectorAll('.mood-scale-btn').forEach(b=>b.classList.remove('active'));
   const btn=document.querySelector('.mood-log-form .btn-journal-save');
-  btn.textContent='✓ Logged!';
-  setTimeout(()=>btn.textContent='Log mood',2000);
+  if(btn){const orig=btn.textContent;btn.textContent='✓ Logged!';setTimeout(()=>btn.textContent=orig,2000);}
 }
 
 function logMoodValue(val,note){
@@ -1562,6 +1621,32 @@ function updateStreakUI(){
 }
 
 // ══════════════════════════════════════════════════════════
+// DOWNLOADS
+// ══════════════════════════════════════════════════════════
+function downloadChat(){
+  if(!chatHistory.length){return;}
+  const date=new Date().toISOString().slice(0,10);
+  const text=chatHistory.map(m=>(m.role==='user'?'You':'Companion')+': '+m.content).join('\n\n');
+  const a=document.createElement('a');
+  a.href='data:text/plain;charset=utf-8,'+encodeURIComponent('Infinity Wellness — Conversation\n'+date+'\n\n'+text);
+  a.download='wellness-chat-'+date+'.txt';
+  a.click();
+}
+
+function downloadJournalEntries(){
+  if(!journalEntries.length){return;}
+  const date=new Date().toISOString().slice(0,10);
+  const text=journalEntries.map(e=>{
+    const d=new Date(e.date).toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    return '── '+e.title+' ('+d+')\n\n'+e.body;
+  }).join('\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n');
+  const a=document.createElement('a');
+  a.href='data:text/plain;charset=utf-8,'+encodeURIComponent('Infinity Wellness — Journal\nExported '+date+'\n\n'+text);
+  a.download='wellness-journal-'+date+'.txt';
+  a.click();
+}
+
+// ══════════════════════════════════════════════════════════
 // AUTO LOGIN
 // ══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
@@ -1574,7 +1659,20 @@ window.addEventListener('DOMContentLoaded',()=>{
       else localStorage.removeItem('wellness_user');
     }catch{localStorage.removeItem('wellness_user');}
   }
-  // 2. Shared Supabase session from account page
+  // 2. Shared session set by account page (reliable)
+  try{
+    const token=localStorage.getItem('ig_account_token');
+    const email=localStorage.getItem('ig_account_email');
+    const name =localStorage.getItem('ig_account_name');
+    if(token&&email){
+      const p=JSON.parse(atob(token.split('.')[1]));
+      if(!p.exp||Date.now()/1000<p.exp){
+        loginSuccess({id:p.sub,email},token,name||email.split('@')[0]);
+        return;
+      }
+    }
+  }catch(e){}
+  // 2b. Fallback: raw Supabase session key (older sessions)
   try{
     const raw=localStorage.getItem('sb-zcvkgevcrgsujnqovxgd-auth-token');
     if(raw){
@@ -1597,6 +1695,5 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
 });
 </script>
-<script src="https://contactinfinitysolutionsllc-ops.github.io/account/ig-account.js"></script>
 </body>
 </html>
